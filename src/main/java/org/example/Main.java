@@ -27,7 +27,7 @@ public class Main {
             } else if (command.equals("e") || command.equals("exit")) {
                 return;
             } else {
-                System.out.println("Invalid command. Try again.");
+                System.err.println("Invalid command. Try again.");
             }
         }
     }
@@ -41,7 +41,7 @@ public class Main {
 
         User user = userService.login(email, password);
 
-        if (user != null) {
+        if (user != null && user.checkPassword(password)) {
             currentUser = user;
 
             List<Email> unreadEmails = emailService.getUnreadEmails(currentUser);
@@ -53,7 +53,7 @@ public class Main {
                 System.out.println("0 unread email.");
 
             while (true) {
-                System.out.print("[S]end, [V]iew, [R]eply, [F]orward, [Q]uit: ");
+                System.out.print("\n[S]end, [V]iew, [R]eply, [F]orward, [Q]uit: ");
                 String cmd = scanner.nextLine().trim().toLowerCase();
 
                 switch (cmd) {
@@ -156,6 +156,7 @@ public class Main {
 
     private static void handleSignup(Scanner scanner, UserService userService) {
         while (true) {
+
             System.out.print("Name: ");
             String name = scanner.nextLine().trim();
 
@@ -166,11 +167,10 @@ public class Main {
             String password = scanner.nextLine().trim();
 
             User user = userService.register(name, email, password);
-            if (user != null) {
-                break;
+            if (user == null) {
+                System.err.println("Please try signing up again.\n");
+                return;
             }
-
-            System.out.println("Please try signing up again.\n");
         }
     }
 }
