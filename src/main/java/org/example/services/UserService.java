@@ -11,13 +11,13 @@ public class UserService {
         String normalizedEmail = normalizeEmail(email);
 
         if (password.length() < 8) {
-            System.err.println("Weak password");
+            System.err.println("Weak password.");
             return null;
         }
 
         User existingUser = SingletonSessionFactory.get()
                 .fromTransaction(session -> session.createNativeQuery(
-                                "select * from users WHERE email = :email", User.class)
+                                "select * from users where email = :email", User.class)
                         .setParameter("email", normalizedEmail)
                         .uniqueResult());
 
@@ -43,7 +43,7 @@ public class UserService {
                         .uniqueResult());
 
         if (user == null || !user.checkPassword(password)) {
-            System.out.println("Invalid email or password.");
+            System.err.println("Invalid email or password.");
             return null;
         }
 
@@ -51,7 +51,7 @@ public class UserService {
         return user;
     }
 
-    private String normalizeEmail(String email) {
+    public static String normalizeEmail(String email) {
         return email.contains("@") ? email : email + "@milou.com";
     }
 
@@ -65,6 +65,5 @@ public class UserService {
                         .uniqueResult()
                 );
     }
-
 
 }

@@ -8,6 +8,7 @@ import org.hibernate.Session;
 import java.time.LocalDate;
 import java.util.*;
 
+import static org.example.services.UserService.normalizeEmail;
 
 public class EmailService {
 
@@ -27,12 +28,12 @@ public class EmailService {
             if (recipient != null) {
                 recipients.add(recipient);
             } else {
-                System.out.println("User not found: " + email);
+                System.err.println("User not found: " + email + "\n");
             }
         }
 
         if (recipients.isEmpty()) {
-            System.out.println("No valid recipients. Email not sent.");
+            System.err.println("No valid recipients. Email not sent.\n");
             return;
         }
 
@@ -42,35 +43,34 @@ public class EmailService {
             Email email = new Email(subject, body, sender, recipients, code);
             session.persist(email);
 
-        System.out.println("Successfully sent your email.");
-        System.out.println("Code: " + code);
+            System.out.println("Successfully sent your email.");
+            System.out.println("Code: " + code);
         });
     }
 
     public List<Email> getAllReceivedEmails(User user) {
         return SingletonSessionFactory.get().fromTransaction(session ->
                 session.createNativeQuery("""
-            select e.* from emails e
-            join email_recipients er on er.email_id = e.id
-            where er.recipient_id = :userId
-            order by e.sent_at DESC
-        """, Email.class)
+                                    select e.* from emails e
+                                    join email_recipients er on er.email_id = e.id
+                                    where er.recipient_id = :userId
+                                    order by e.sent_at DESC
+                                """, Email.class)
                         .setParameter("userId", user.getId())
                         .getResultList()
         );
     }
 
-
     public List<Email> getUnreadEmails(User user) {
         return SingletonSessionFactory.get().fromTransaction(session ->
                 session.createNativeQuery("""
-            select e.*
-            from emails e
-            join email_recipients er on e.id = er.email_id
-            where er.recipient_id = :userId
-              and er.is_read = false
-            order by e.sent_at DESC
-        """, Email.class)
+                                    select e.*
+                                    from emails e
+                                    join email_recipients er on e.id = er.email_id
+                                    where er.recipient_id = :userId
+                                      and er.is_read = false
+                                    order by e.sent_at DESC
+                                """, Email.class)
                         .setParameter("userId", user.getId())
                         .getResultList()
         );
@@ -79,14 +79,14 @@ public class EmailService {
     public List<Object[]> getSentEmails(User sender) {
         return SingletonSessionFactory.get().fromTransaction(session ->
                 session.createNativeQuery("""
-            select e.subject, e.code, GROUP_CONCAT(DISTINCT r.email SEPARATOR ', ') as recipients
-            from emails e
-            join email_recipients er on er.email_id = e.id
-            join users r on er.recipient_id = r.id
-            where e.sender_id = :senderId
-            group by e.id
-            order by e.sent_at DESC
-        """)
+                                    select e.subject, e.code, GROUP_CONCAT(DISTINCT r.email SEPARATOR ', ') as recipients
+                                    from emails e
+                                    join email_recipients er on er.email_id = e.id
+                                    join users r on er.recipient_id = r.id
+                                    where e.sender_id = :senderId
+                                    group by e.id
+                                    order by e.sent_at DESC
+                                """)
                         .setParameter("senderId", sender.getId())
                         .list()
         );
@@ -95,32 +95,32 @@ public class EmailService {
     public void readEmailByCode(User user, String code) {
         SingletonSessionFactory.get().inTransaction(session -> {
             Email email = session.createNativeQuery("""
-                select e.*
-                from emails e
-                where e.code = :code
-            """, Email.class)
+                                select e.*
+                                from emails e
+                                where e.code = :code
+                            """, Email.class)
                     .setParameter("code", code)
                     .uniqueResult();
 
             if (email == null) {
-                System.out.println("No email found with this code.");
+                System.err.println("No email found with this code.");
                 return;
             }
 
             boolean isSender = email.getSender().getId().equals(user.getId());
 
             boolean isRecipient = session.createNativeQuery("""
-                select 1
-                from email_recipients
-                where email_id = :emailId
-                  and recipient_id = :userId
-            """)
+                                select 1
+                                from email_recipients
+                                where email_id = :emailId
+                                  and recipient_id = :userId
+                            """)
                     .setParameter("emailId", email.getId())
                     .setParameter("userId", user.getId())
                     .uniqueResult() != null;
 
             if (!isSender && !isRecipient) {
-                System.out.println("You cannot read this email.");
+                System.err.println("You cannot read this email.");
                 return;
             }
 
@@ -128,11 +128,11 @@ public class EmailService {
             System.out.println("Code: " + email.getCode());
 
             List<String> recipientEmails = session.createNativeQuery("""
-                select u.email
-                from users u
-                join email_recipients er on er.recipient_id = u.id
-                where er.email_id = :emailId
-            """)
+                                select u.email
+                                from users u
+                                join email_recipients er on er.recipient_id = u.id
+                                where er.email_id = :emailId
+                            """)
                     .setParameter("emailId", email.getId())
                     .getResultList();
 
@@ -144,18 +144,17 @@ public class EmailService {
 
             if (isRecipient) {
                 session.createNativeQuery("""
-                    update email_recipients
-                    set is_read = true
-                    where email_id = :emailId
-                      and recipient_id = :userId
-                """)
+                                    update email_recipients
+                                    set is_read = true
+                                    where email_id = :emailId
+                                      and recipient_id = :userId
+                                """)
                         .setParameter("emailId", email.getId())
                         .setParameter("userId", user.getId())
                         .executeUpdate();
             }
         });
     }
-
 
 
     public void replyToEmail(User replier, String originalCode, String replyBody) {
@@ -167,7 +166,7 @@ public class EmailService {
                     .uniqueResult();
 
             if (originalEmail == null) {
-                System.out.println("Email not found.");
+                System.err.println("Email not found.\n");
                 return;
             }
 
@@ -175,28 +174,29 @@ public class EmailService {
             Long emailId = originalEmail.getId();
 
             boolean isSender = session.createNativeQuery(""" 
-                     select 1 from emails where id = :emailId AND sender_id = :userId
-                     """)
+                            select 1 from emails where id = :emailId AND sender_id = :userId
+                            """)
                     .setParameter("emailId", emailId)
                     .setParameter("userId", userId)
                     .uniqueResult() != null;
 
-            boolean isRecipient =
-                    session.createNativeQuery("""
-                     select 1 from email_recipients where email_id = :emailId AND recipient_id = :userId
-                    """)
-                    .setParameter("emailId", emailId)
-                    .setParameter("userId", userId)
-                    .uniqueResult() != null;
+            boolean isRecipient = session.createNativeQuery("""
+                                     select 1 from email_recipients where email_id = :emailId AND recipient_id = :userId
+                                    """)
+                            .setParameter("emailId", emailId)
+                            .setParameter("userId", userId)
+                            .uniqueResult() != null;
 
             if (!isSender && !isRecipient) {
-                System.out.println("You cannot reply to this email.");
+                System.err.println("You cannot reply to this email.\n");
                 return;
             }
 
-            @SuppressWarnings("unchecked")
+
             List<User> originalRecipients = session.createNativeQuery(
-                            "select u.* from users u join email_recipients er ON u.id = er.recipient_id WHERE er.email_id = :emailId",
+                            """
+                                    select u.* from users u join email_recipients er on u.id = er.recipient_id 
+                                    where er.email_id = :emailId""",
                             User.class)
                     .setParameter("emailId", emailId)
                     .getResultList();
@@ -249,7 +249,6 @@ public class EmailService {
     }
 
 
-
     public void forwardEmail(User forwarder, String originalCode, List<String> recipientEmails) {
         SingletonSessionFactory.get().inTransaction(session -> {
             Email originalEmail = session.createNativeQuery(
@@ -258,36 +257,40 @@ public class EmailService {
                     .uniqueResult();
 
             if (originalEmail == null) {
-                System.out.println("Original email not found.");
+                System.err.println("Original email not found.\n");
                 return;
             }
 
             Long forwarderUserId = forwarder.getId();
             Long originalEmailId = originalEmail.getId();
 
+            for (int i = 0; i < recipientEmails.size(); i++) {
+                recipientEmails.set(i, normalizeEmail(recipientEmails.get(i)));
+            }
+
             boolean allowed = session.createNativeQuery("""
-                select 1 from emails e
-                where e.id = :emailId and (e.sender_id = :userId or exists (
-                    SELECT 1 FROM email_recipients r
-                    WHERE r.email_id = e.id AND r.recipient_id = :userId
-                ))
-            """)
+                                select 1 from emails e
+                                where e.id = :emailId and (e.sender_id = :userId or exists (
+                                    select 1 from email_recipients r
+                                    where r.email_id = e.id and r.recipient_id = :userId
+                                ))
+                            """)
                     .setParameter("emailId", originalEmailId)
                     .setParameter("userId", forwarderUserId)
                     .uniqueResult() != null;
 
             if (!allowed) {
-                System.out.println("You cannot forward this email.");
+                System.out.println("You cannot forward this email.\n");
                 return;
             }
 
             List<User> newRecipients = session.createNativeQuery(
-                            "SELECT * FROM users WHERE email IN (:emails)", User.class)
+                            "select * from users WHERE email in (:emails)", User.class)
                     .setParameter("emails", recipientEmails)
                     .getResultList();
 
             if (newRecipients.isEmpty()) {
-                System.out.println("No valid recipients found.");
+                System.err.println("No valid recipients found.");
                 return;
             }
 
@@ -297,7 +300,7 @@ public class EmailService {
             String code;
             do {
                 code = generateUniqueCode(session);
-            } while (session.createNativeQuery("SELECT 1 FROM emails WHERE code = :code")
+            } while (session.createNativeQuery("select 1 from emails WHERE code = :code")
                     .setParameter("code", code)
                     .uniqueResult() != null);
 
@@ -309,7 +312,7 @@ public class EmailService {
             for (User u : newRecipients) {
                 emails.add(u.getEmail());
             }
-            System.out.println(String.join(", ", emails));
+            System.out.println("Recipient(s): " + String.join(", ", emails));
             System.out.println("Subject: " + subject);
             System.out.println("Date: " + forwarded.getSentAt().toLocalDate());
             System.out.println();
@@ -322,14 +325,13 @@ public class EmailService {
     }
 
 
-
     public String generateUniqueCode(Session session) {
         String code;
         boolean exists;
 
         do {
             code = generateRandomCode();
-            exists = session.createQuery("SELECT 1 FROM Email e WHERE e.code = :code")
+            exists = session.createQuery("select 1 from Email e where e.code = :code")
                     .setParameter("code", code)
                     .uniqueResult() != null;
         } while (exists);
