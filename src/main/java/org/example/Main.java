@@ -157,7 +157,7 @@ public class Main {
     private static void handleSignup(Scanner scanner, UserService userService) {
         while (true) {
 
-            System.out.print("Name: ");
+            System.out.print("\nName: ");
             String name = scanner.nextLine().trim();
 
             System.out.print("Email: ");
@@ -167,10 +167,12 @@ public class Main {
             String password = scanner.nextLine().trim();
 
             User user = userService.register(name, email, password);
+
             if (user == null) {
                 System.err.println("Please try signing up again.\n");
-                return;
             }
+            else
+                return;
         }
     }
 }
