@@ -10,6 +10,16 @@ public class UserService {
     public User register(String name, String email, String password) {
         String normalizedEmail = normalizeEmail(email);
 
+        if (name == null || name.trim().isEmpty()) {
+            System.err.println("Name cannot be empty.");
+            return null;
+        }
+
+        if (normalizedEmail == null || normalizedEmail.trim().isEmpty()) {
+            System.err.println("Email cannot be empty.");
+            return null;
+        }
+
         if (password.length() < 8) {
             System.err.println("Weak password.");
             return null;
