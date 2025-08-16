@@ -10,14 +10,24 @@ public class UserService {
     public User register(String name, String email, String password) {
         String normalizedEmail = normalizeEmail(email);
 
+        if (name == null || name.trim().isEmpty()) {
+            System.err.println("Name cannot be empty.");
+            return null;
+        }
+
+        if (normalizedEmail == null || normalizedEmail.trim().isEmpty()) {
+            System.err.println("Email cannot be empty.");
+            return null;
+        }
+
         if (password.length() < 8) {
-            System.err.println("Weak password");
+            System.err.println("Weak password.");
             return null;
         }
 
         User existingUser = SingletonSessionFactory.get()
                 .fromTransaction(session -> session.createNativeQuery(
-                                "select * from users WHERE email = :email", User.class)
+                                "select * from users where email = :email", User.class)
                         .setParameter("email", normalizedEmail)
                         .uniqueResult());
 
@@ -43,7 +53,7 @@ public class UserService {
                         .uniqueResult());
 
         if (user == null || !user.checkPassword(password)) {
-            System.out.println("Invalid email or password.");
+            System.err.println("Invalid email or password.");
             return null;
         }
 
@@ -51,7 +61,7 @@ public class UserService {
         return user;
     }
 
-    private String normalizeEmail(String email) {
+    public static String normalizeEmail(String email) {
         return email.contains("@") ? email : email + "@milou.com";
     }
 
@@ -65,6 +75,5 @@ public class UserService {
                         .uniqueResult()
                 );
     }
-
 
 }
